@@ -119,6 +119,7 @@
 #include "scene/gui/texture_button.h"
 #include "scene/gui/texture_progress_bar.h"
 #include "scene/gui/texture_rect.h"
+#include "scene/gui/toast.h"
 #include "scene/gui/tree.h"
 #include "scene/gui/video_player.h"
 #include "scene/main/canvas_item.h"
@@ -308,6 +309,7 @@ void register_scene_types() {
 	ClassDB::register_class<Control>();
 	ClassDB::register_class<Button>();
 	ClassDB::register_class<Label>();
+	ClassDB::register_class<Toast>();
 	ClassDB::register_virtual_class<ScrollBar>();
 	ClassDB::register_class<HScrollBar>();
 	ClassDB::register_class<VScrollBar>();
