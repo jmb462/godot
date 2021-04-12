@@ -54,6 +54,7 @@ class OS {
 	bool _verbose_stdout;
 	bool _debug_stdout;
 	String _local_clipboard;
+	Ref<Image> _local_image_clipboard;
 	uint64_t _msec_splash;
 	bool _no_window;
 	int _exit_code = EXIT_FAILURE; // unexpected exit is marked as failure
@@ -177,6 +178,7 @@ public:
 
 	virtual void set_clipboard(const String &p_text);
 	virtual String get_clipboard() const;
+	virtual Ref<Image> get_image_clipboard() const;
 
 	virtual void set_video_mode(const VideoMode &p_video_mode, int p_screen = 0) = 0;
 	virtual VideoMode get_video_mode(int p_screen = 0) const = 0;

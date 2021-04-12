@@ -1724,7 +1724,7 @@ void OS_Windows::set_clipboard(const String &p_text) {
 	// Otherwise, line endings won't be visible when pasted in other software
 	String text = p_text.replace("\r\n", "\n").replace("\n", "\r\n"); // avoid \r\r\n
 
-	if (!OpenClipboard(hWnd)) {
+	if (! OpenClipboard(hWnd)) {
 		ERR_FAIL_MSG("Unable to open clipboard.");
 	}
 	EmptyClipboard();
@@ -1752,6 +1752,56 @@ void OS_Windows::set_clipboard(const String &p_text) {
 
 	CloseClipboard();
 };
+
+Ref<Image> OS_Windows::get_image_clipboard() const {
+
+	Ref<Image> image = memnew(Image);
+
+	if (!OpenClipboard(hWnd)) {
+		return image;
+	};
+
+	if (IsClipboardFormatAvailable(CF_DIB)) {
+
+		HGLOBAL mem = GetClipboardData(CF_DIB);
+		if (mem != NULL) {
+			print_line("YES !");
+			LPWSTR ptr = (LPWSTR)GlobalLock(mem);
+			if (ptr != NULL) {
+
+				BITMAPINFOHEADER *info = reinterpret_cast<BITMAPINFOHEADER *>(ptr);
+				BITMAPFILEHEADER fileHeader = { 0 };
+				fileHeader.bfType = 0x4D42;
+				fileHeader.bfOffBits = 54;
+				fileHeader.bfSize = (((info->biWidth * info->biBitCount + 31) & ~31) / 8 * info->biHeight) + fileHeader.bfOffBits;
+
+				/*std::ofstream file("D:/godot/fix/font/YO.bmp", std::ios::out | std::ios::binary);
+				if (file) {
+					file.write(reinterpret_cast<char *>(&fileHeader), sizeof(BITMAPFILEHEADER));
+					file.write(reinterpret_cast<char *>(info), sizeof(BITMAPINFOHEADER));
+					file.write(reinterpret_cast<char *>(++info), fileHeader.bfSize);
+				}*/
+
+				//memcpy()
+
+				char *data;
+				memcpy(data, reinterpret_cast<char *>(++info), fileHeader.bfSize);
+				PoolByteArray pba;
+				for (int i = 0; i < (int)fileHeader.bfSize; i++) {
+					pba.append(data[i]);
+				}
+				image->create(info->biWidth, info->biHeight, false, Image::Format::FORMAT_RGB8, pba);
+
+				GlobalUnlock(mem);
+				
+			};
+		};
+	}
+
+	CloseClipboard();
+	
+	return image;
+}
 
 String OS_Windows::get_clipboard() const {
 

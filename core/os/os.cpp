@@ -177,6 +177,11 @@ String OS::get_clipboard() const {
 	return _local_clipboard;
 }
 
+Ref<Image> OS::get_image_clipboard() const {
+
+	return _local_image_clipboard;
+}
+
 String OS::get_executable_path() const {
 
 	return _execpath;

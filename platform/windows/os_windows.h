@@ -31,6 +31,9 @@
 #ifndef OS_WINDOWS_H
 #define OS_WINDOWS_H
 
+#include <stdio.h>
+#include <fstream>
+#include "core/reference.h"
 #include "context_gl_windows.h"
 #include "core/os/input.h"
 #include "core/os/os.h"
@@ -505,6 +508,7 @@ public:
 
 	virtual void set_clipboard(const String &p_text);
 	virtual String get_clipboard() const;
+	virtual Ref<Image> get_image_clipboard() const;
 
 	void set_cursor_shape(CursorShape p_shape);
 	CursorShape get_cursor_shape() const;
