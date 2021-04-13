@@ -1765,37 +1765,29 @@ Ref<Image> OS_Windows::get_image_clipboard() const {
 
 		HGLOBAL mem = GetClipboardData(CF_DIB);
 		if (mem != NULL) {
-			print_line("YES !");
-			LPWSTR ptr = (LPWSTR)GlobalLock(mem);
+
+			BITMAPINFO *ptr = static_cast<BITMAPINFO *>(GlobalLock(mem));
+
 			if (ptr != NULL) {
 
-				BITMAPINFOHEADER *info = reinterpret_cast<BITMAPINFOHEADER *>(ptr);
-				BITMAPFILEHEADER fileHeader = { 0 };
-				fileHeader.bfType = 0x4D42;
-				fileHeader.bfOffBits = 54;
-				fileHeader.bfSize = (((info->biWidth * info->biBitCount + 31) & ~31) / 8 * info->biHeight) + fileHeader.bfOffBits;
-
-				/*std::ofstream file("D:/godot/fix/font/YO.bmp", std::ios::out | std::ios::binary);
-				if (file) {
-					file.write(reinterpret_cast<char *>(&fileHeader), sizeof(BITMAPFILEHEADER));
-					file.write(reinterpret_cast<char *>(info), sizeof(BITMAPINFOHEADER));
-					file.write(reinterpret_cast<char *>(++info), fileHeader.bfSize);
-				}*/
-
-				//memcpy()
-
-				char *data;
-				memcpy(data, reinterpret_cast<char *>(++info), fileHeader.bfSize);
+				BITMAPINFOHEADER *info = &ptr->bmiHeader;
 				PoolByteArray pba;
-				for (int i = 0; i < (int)fileHeader.bfSize; i++) {
-					pba.append(data[i]);
-				}
-				image->create(info->biWidth, info->biHeight, false, Image::Format::FORMAT_RGB8, pba);
 
-				GlobalUnlock(mem);
+				for (LONG y = info->biHeight - 1; y > -1; y--) {
+					for (LONG x = 0; x < info->biWidth; x++) {
+						tagRGBQUAD *rgbquad = ptr->bmiColors + (info->biWidth * y) + x;
+						pba.append(rgbquad->rgbRed);
+						pba.append(rgbquad->rgbGreen);
+						pba.append(rgbquad->rgbBlue);
+						pba.append(rgbquad->rgbReserved);
+					}
+				}
+
+				image->create(info->biWidth, info->biHeight, false, Image::Format::FORMAT_RGBA8, pba);
 				
-			};
-		};
+				GlobalUnlock(mem);
+			}
+		}
 	}
 
 	CloseClipboard();
