@@ -1430,7 +1430,7 @@ void CodeEdit::fold_line(int p_line) {
 		}
 	}
 
-	for (int i = p_line + 1; i <= end_line; i++) {
+	for (int i = p_line + 1; i < end_line; i++) {
 		_set_line_as_hidden(i, true);
 	}
 
