@@ -424,6 +424,16 @@ void ItemList::clear() {
 	notify_property_list_changed();
 }
 
+void ItemList::set_wheel_scroll_sensibility(int p_sensibility) {
+	ERR_FAIL_COND(!scroll_bar);
+	wheel_scroll_sensibility = p_sensibility;
+	scroll_bar->set_wheel_scroll_sensibility(p_sensibility);
+}
+
+int ItemList::get_wheel_scroll_sensibility() const {
+	return wheel_scroll_sensibility;
+}
+
 void ItemList::set_fixed_column_width(int p_size) {
 	ERR_FAIL_COND(p_size < 0);
 	fixed_column_width = p_size;
@@ -555,100 +565,103 @@ void ItemList::gui_input(const Ref<InputEvent> &p_event) {
 		return;
 	}
 
-	if (mb.is_valid() && (mb->get_button_index() == MouseButton::LEFT || (allow_rmb_select && mb->get_button_index() == MouseButton::RIGHT)) && mb->is_pressed()) {
-		search_string = ""; //any mousepress cancels
-		Vector2 pos = mb->get_position();
-		Ref<StyleBox> bg = get_theme_stylebox(SNAME("bg"));
-		pos -= bg->get_offset();
-		pos.y += scroll_bar->get_value();
+	if (mb.is_valid()) {
+		if ((mb->get_button_index() == MouseButton::LEFT || (allow_rmb_select && mb->get_button_index() == MouseButton::RIGHT)) && mb->is_pressed()) {
+			search_string = ""; //any mousepress cancels
+			Vector2 pos = mb->get_position();
+			Ref<StyleBox> bg = get_theme_stylebox(SNAME("bg"));
+			pos -= bg->get_offset();
+			pos.y += scroll_bar->get_value();
 
-		if (is_layout_rtl()) {
-			pos.x = get_size().width - pos.x;
-		}
-
-		int closest = -1;
-
-		for (int i = 0; i < items.size(); i++) {
-			Rect2 rc = items[i].rect_cache;
-			if (i % current_columns == current_columns - 1) {
-				rc.size.width = get_size().width; //not right but works
+			if (is_layout_rtl()) {
+				pos.x = get_size().width - pos.x;
 			}
 
-			if (rc.has_point(pos)) {
-				closest = i;
-				break;
-			}
-		}
+			int closest = -1;
 
-		if (closest != -1) {
-			int i = closest;
-
-			if (select_mode == SELECT_MULTI && items[i].selected && mb->is_command_pressed()) {
-				deselect(i);
-				emit_signal(SNAME("multi_selected"), i, false);
-
-			} else if (select_mode == SELECT_MULTI && mb->is_shift_pressed() && current >= 0 && current < items.size() && current != i) {
-				int from = current;
-				int to = i;
-				if (i < current) {
-					SWAP(from, to);
+			for (int i = 0; i < items.size(); i++) {
+				Rect2 rc = items[i].rect_cache;
+				if (i % current_columns == current_columns - 1) {
+					rc.size.width = get_size().width; //not right but works
 				}
-				for (int j = from; j <= to; j++) {
-					bool selected = !items[j].selected;
-					select(j, false);
-					if (selected) {
-						emit_signal(SNAME("multi_selected"), j, true);
+
+				if (rc.has_point(pos)) {
+					closest = i;
+					break;
+				}
+			}
+
+			if (closest != -1) {
+				int i = closest;
+
+				if (select_mode == SELECT_MULTI && items[i].selected && mb->is_command_pressed()) {
+					deselect(i);
+					emit_signal(SNAME("multi_selected"), i, false);
+
+				} else if (select_mode == SELECT_MULTI && mb->is_shift_pressed() && current >= 0 && current < items.size() && current != i) {
+					int from = current;
+					int to = i;
+					if (i < current) {
+						SWAP(from, to);
 					}
-				}
-
-				if (mb->get_button_index() == MouseButton::RIGHT) {
-					emit_signal(SNAME("item_rmb_selected"), i, get_local_mouse_position());
-				}
-			} else {
-				if (!mb->is_double_click() && !mb->is_command_pressed() && select_mode == SELECT_MULTI && items[i].selectable && !items[i].disabled && items[i].selected && mb->get_button_index() == MouseButton::LEFT) {
-					defer_select_single = i;
-					return;
-				}
-
-				if (items[i].selected && mb->get_button_index() == MouseButton::RIGHT) {
-					emit_signal(SNAME("item_rmb_selected"), i, get_local_mouse_position());
-				} else {
-					bool selected = items[i].selected;
-
-					select(i, select_mode == SELECT_SINGLE || !mb->is_command_pressed());
-
-					if (!selected || allow_reselect) {
-						if (select_mode == SELECT_SINGLE) {
-							emit_signal(SNAME("item_selected"), i);
-						} else {
-							emit_signal(SNAME("multi_selected"), i, true);
+					for (int j = from; j <= to; j++) {
+						bool selected = !items[j].selected;
+						select(j, false);
+						if (selected) {
+							emit_signal(SNAME("multi_selected"), j, true);
 						}
 					}
 
 					if (mb->get_button_index() == MouseButton::RIGHT) {
 						emit_signal(SNAME("item_rmb_selected"), i, get_local_mouse_position());
-					} else if (/*select_mode==SELECT_SINGLE &&*/ mb->is_double_click()) {
-						emit_signal(SNAME("item_activated"), i);
+					}
+				} else {
+					if (!mb->is_double_click() && !mb->is_command_pressed() && select_mode == SELECT_MULTI && items[i].selectable && !items[i].disabled && items[i].selected && mb->get_button_index() == MouseButton::LEFT) {
+						defer_select_single = i;
+						return;
+					}
+
+					if (items[i].selected && mb->get_button_index() == MouseButton::RIGHT) {
+						emit_signal(SNAME("item_rmb_selected"), i, get_local_mouse_position());
+					} else {
+						bool selected = items[i].selected;
+
+						select(i, select_mode == SELECT_SINGLE || !mb->is_command_pressed());
+
+						if (!selected || allow_reselect) {
+							if (select_mode == SELECT_SINGLE) {
+								emit_signal(SNAME("item_selected"), i);
+							} else {
+								emit_signal(SNAME("multi_selected"), i, true);
+							}
+						}
+
+						if (mb->get_button_index() == MouseButton::RIGHT) {
+							emit_signal(SNAME("item_rmb_selected"), i, get_local_mouse_position());
+						} else if (/*select_mode==SELECT_SINGLE &&*/ mb->is_double_click()) {
+							emit_signal(SNAME("item_activated"), i);
+						}
 					}
 				}
+
+				return;
+			}
+			if (mb->get_button_index() == MouseButton::RIGHT) {
+				emit_signal(SNAME("rmb_clicked"), mb->get_position());
+
+				return;
 			}
 
-			return;
-		}
-		if (mb->get_button_index() == MouseButton::RIGHT) {
-			emit_signal(SNAME("rmb_clicked"), mb->get_position());
-
-			return;
+			// Since closest is null, more likely we clicked on empty space, so send signal to interested controls. Allows, for example, implement items deselecting.
+			emit_signal(SNAME("nothing_selected"));
 		}
 
-		// Since closest is null, more likely we clicked on empty space, so send signal to interested controls. Allows, for example, implement items deselecting.
-		emit_signal(SNAME("nothing_selected"));
-	}
-	if (mb.is_valid() && mb->get_button_index() == MouseButton::WHEEL_UP && mb->is_pressed()) {
-		scroll_bar->set_value(scroll_bar->get_value() - scroll_bar->get_page() * mb->get_factor() / 8);
-	}
-	if (mb.is_valid() && mb->get_button_index() == MouseButton::WHEEL_DOWN && mb->is_pressed()) {
-		scroll_bar->set_value(scroll_bar->get_value() + scroll_bar->get_page() * mb->get_factor() / 8);
+		if ((mb->get_button_index() == MouseButton::WHEEL_UP || mb->get_button_index() == MouseButton::WHEEL_DOWN) && mb->is_pressed()) {
+			float scroll_amount = scroll_bar->get_page() * mb->get_factor() / 24 * wheel_scroll_sensibility;
+			int direction = mb->get_button_index() == MouseButton::WHEEL_UP ? -1 : 1;
+			int multiplier = mb->is_alt_pressed() ? 5 : 1;
+			scroll_bar->set_value(scroll_bar->get_value() + scroll_amount * multiplier * direction);
+		}
 	}
 
 	if (p_event->is_pressed() && items.size() > 0) {

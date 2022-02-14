@@ -94,33 +94,26 @@ void ScrollContainer::gui_input(const Ref<InputEvent> &p_gui_input) {
 	Ref<InputEventMouseButton> mb = p_gui_input;
 
 	if (mb.is_valid()) {
-		if (mb->get_button_index() == MouseButton::WHEEL_UP && mb->is_pressed()) {
-			// only horizontal is enabled, scroll horizontally
-			if (h_scroll->is_visible() && (!v_scroll->is_visible() || mb->is_shift_pressed())) {
-				h_scroll->set_value(h_scroll->get_value() - h_scroll->get_page() / 8 * mb->get_factor());
-			} else if (v_scroll->is_visible_in_tree()) {
-				v_scroll->set_value(v_scroll->get_value() - v_scroll->get_page() / 8 * mb->get_factor());
-			}
+		// Vertical mouse wheel can control both scrollbars
+		if ((mb->get_button_index() == MouseButton::WHEEL_UP || mb->get_button_index() == MouseButton::WHEEL_DOWN) && mb->is_pressed()) {
+			int direction = mb->get_button_index() == MouseButton::WHEEL_UP ? -1 : 1;
+			// Speed up scroll with Alt Key
+			int multiplier = mb->is_alt_pressed() ? 5 : 1;
+			// Get the horizontal or vertical scrollbar
+			bool use_h_scroll = h_scroll->is_visible() && (!v_scroll->is_visible() || mb->is_shift_pressed());
+			ScrollBar *scroll = use_h_scroll ? (ScrollBar *)h_scroll : (ScrollBar *)v_scroll;
+			float scroll_amount = scroll->get_page() * mb->get_factor() / 24 * wheel_scroll_sensibility;
+			scroll->set_value(scroll->get_value() + scroll_amount * multiplier * direction);
 		}
 
-		if (mb->get_button_index() == MouseButton::WHEEL_DOWN && mb->is_pressed()) {
-			// only horizontal is enabled, scroll horizontally
-			if (h_scroll->is_visible() && (!v_scroll->is_visible() || mb->is_shift_pressed())) {
-				h_scroll->set_value(h_scroll->get_value() + h_scroll->get_page() / 8 * mb->get_factor());
-			} else if (v_scroll->is_visible()) {
-				v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() / 8 * mb->get_factor());
-			}
-		}
-
-		if (mb->get_button_index() == MouseButton::WHEEL_LEFT && mb->is_pressed()) {
+		// Horizontal mouse wheel can only control horizontal scrollbar
+		if ((mb->get_button_index() == MouseButton::WHEEL_LEFT || mb->get_button_index() == MouseButton::WHEEL_RIGHT) && mb->is_pressed()) {
 			if (h_scroll->is_visible_in_tree()) {
-				h_scroll->set_value(h_scroll->get_value() - h_scroll->get_page() * mb->get_factor() / 8);
-			}
-		}
-
-		if (mb->get_button_index() == MouseButton::WHEEL_RIGHT && mb->is_pressed()) {
-			if (h_scroll->is_visible_in_tree()) {
-				h_scroll->set_value(h_scroll->get_value() + h_scroll->get_page() * mb->get_factor() / 8);
+				int direction = mb->get_button_index() == MouseButton::WHEEL_LEFT ? -1 : 1;
+				// Speed up scroll with Alt Key
+				int multiplier = mb->is_alt_pressed() ? 5 : 1;
+				float scroll_amount = h_scroll->get_page() * mb->get_factor() / 24 * wheel_scroll_sensibility;
+				h_scroll->set_value(h_scroll->get_value() + scroll_amount * multiplier * direction);
 			}
 		}
 
@@ -505,6 +498,16 @@ bool ScrollContainer::is_following_focus() const {
 
 void ScrollContainer::set_follow_focus(bool p_follow) {
 	follow_focus = p_follow;
+}
+
+void ScrollContainer::set_wheel_scroll_sensibility(int p_sensibility) {
+	wheel_scroll_sensibility = p_sensibility;
+	v_scroll->set_wheel_scroll_sensibility(p_sensibility);
+	h_scroll->set_wheel_scroll_sensibility(p_sensibility);
+}
+
+int ScrollContainer::get_wheel_scroll_sensibility() const {
+	return wheel_scroll_sensibility;
 }
 
 TypedArray<String> ScrollContainer::get_configuration_warnings() const {

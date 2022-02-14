@@ -1343,6 +1343,11 @@ void ScriptTextEditor::_notification(int p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			code_editor->get_text_editor()->set_gutter_width(connection_gutter, code_editor->get_text_editor()->get_line_height());
 		} break;
+		case NOTIFICATION_READY:
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+			errors_panel->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
+			warnings_panel->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
+		} break;
 		default:
 			break;
 	}

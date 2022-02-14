@@ -361,6 +361,7 @@ private:
 	bool scroll_active = true;
 	int scroll_w = 0;
 	bool scroll_updated = false;
+	int wheel_scroll_sensibility = 3;
 	bool updating_scroll = false;
 	int current_idx = 1;
 	int current_char_ofs = 0;
@@ -535,6 +536,9 @@ public:
 
 	void set_scroll_active(bool p_active);
 	bool is_scroll_active() const;
+
+	void set_wheel_scroll_sensibility(int p_sensibility);
+	int get_wheel_scroll_sensibility() const;
 
 	void set_scroll_follow(bool p_follow);
 	bool is_scroll_following() const;

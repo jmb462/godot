@@ -461,11 +461,10 @@ void TextEdit::_notification(int p_what) {
 		case NOTIFICATION_INTERNAL_PHYSICS_PROCESS: {
 			if (scrolling && get_v_scroll() != target_v_scroll) {
 				double target_y = target_v_scroll - get_v_scroll();
-				double dist = sqrt(target_y * target_y);
 				// To ensure minimap is responsive override the speed setting.
-				double vel = ((target_y / dist) * ((minimap_clicked) ? 3000 : v_scroll_speed)) * get_physics_process_delta_time();
+				double vel = (SIGN(target_y) * ((minimap_clicked || speed_scroll_key_pressed) ? 3000 : v_scroll_speed)) * get_physics_process_delta_time();
 
-				if (Math::abs(vel) >= dist) {
+				if (Math::abs(vel) >= Math::abs(target_y)) {
 					set_v_scroll(target_v_scroll);
 					scrolling = false;
 					minimap_clicked = false;
@@ -1543,33 +1542,34 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 
 		if (mb->is_pressed()) {
+			speed_scroll_key_pressed = mb->is_alt_pressed();
 			if (mb->get_button_index() == MouseButton::WHEEL_UP && !mb->is_command_pressed()) {
 				if (mb->is_shift_pressed()) {
-					h_scroll->set_value(h_scroll->get_value() - (100 * mb->get_factor()));
-				} else if (mb->is_alt_pressed()) {
+					h_scroll->set_value(h_scroll->get_value() - (33 * mb->get_factor() * wheel_scroll_sensibility));
+				} else if (speed_scroll_key_pressed) {
 					// Scroll 5 times as fast as normal (like in Visual Studio Code).
-					_scroll_up(15 * mb->get_factor());
+					_scroll_up(5 * wheel_scroll_sensibility * mb->get_factor());
 				} else if (v_scroll->is_visible()) {
 					// Scroll 3 lines.
-					_scroll_up(3 * mb->get_factor());
+					_scroll_up(wheel_scroll_sensibility * mb->get_factor());
 				}
 			}
 			if (mb->get_button_index() == MouseButton::WHEEL_DOWN && !mb->is_command_pressed()) {
 				if (mb->is_shift_pressed()) {
-					h_scroll->set_value(h_scroll->get_value() + (100 * mb->get_factor()));
-				} else if (mb->is_alt_pressed()) {
+					h_scroll->set_value(h_scroll->get_value() + (33 * mb->get_factor() * wheel_scroll_sensibility));
+				} else if (speed_scroll_key_pressed) {
 					// Scroll 5 times as fast as normal (like in Visual Studio Code).
-					_scroll_down(15 * mb->get_factor());
+					_scroll_down(5 * wheel_scroll_sensibility * mb->get_factor());
 				} else if (v_scroll->is_visible()) {
 					// Scroll 3 lines.
-					_scroll_down(3 * mb->get_factor());
+					_scroll_down(wheel_scroll_sensibility * mb->get_factor());
 				}
 			}
 			if (mb->get_button_index() == MouseButton::WHEEL_LEFT) {
-				h_scroll->set_value(h_scroll->get_value() - (100 * mb->get_factor()));
+				h_scroll->set_value(h_scroll->get_value() - (33 * mb->get_factor() * wheel_scroll_sensibility));
 			}
 			if (mb->get_button_index() == MouseButton::WHEEL_RIGHT) {
-				h_scroll->set_value(h_scroll->get_value() + (100 * mb->get_factor()));
+				h_scroll->set_value(h_scroll->get_value() + (33 * mb->get_factor() * wheel_scroll_sensibility));
 			}
 			if (mb->get_button_index() == MouseButton::LEFT) {
 				_reset_caret_blink_timer();
@@ -1831,6 +1831,11 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 	Ref<InputEventKey> k = p_gui_input;
 
 	if (k.is_valid()) {
+		//if (k->get_keycode() == Key::ALT) {
+		//	speed_scroll_key_pressed = k->is_pressed();
+		//	print_line(vformat("speed scroll key :%s", speed_scroll_key_pressed));
+		//}
+
 		if (!k->is_pressed()) {
 			return;
 		}
@@ -4370,6 +4375,18 @@ void TextEdit::set_v_scroll_speed(float p_speed) {
 
 float TextEdit::get_v_scroll_speed() const {
 	return v_scroll_speed;
+}
+
+void TextEdit::set_wheel_scroll_sensibility(int p_sensibility) {
+	ERR_FAIL_COND(!v_scroll);
+	ERR_FAIL_COND(!h_scroll);
+	wheel_scroll_sensibility = p_sensibility;
+	v_scroll->set_wheel_scroll_sensibility(p_sensibility);
+	h_scroll->set_wheel_scroll_sensibility(p_sensibility);
+}
+
+int TextEdit::get_wheel_scroll_sensibility() const {
+	return wheel_scroll_sensibility;
 }
 
 double TextEdit::get_scroll_pos_for_line(int p_line, int p_wrap_index) const {

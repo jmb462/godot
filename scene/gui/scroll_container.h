@@ -65,6 +65,7 @@ private:
 
 	ScrollMode horizontal_scroll_mode = SCROLL_MODE_AUTO;
 	ScrollMode vertical_scroll_mode = SCROLL_MODE_AUTO;
+	int wheel_scroll_sensibility = 3;
 
 	int deadzone = 0;
 	bool follow_focus = false;
@@ -104,6 +105,9 @@ public:
 
 	bool is_following_focus() const;
 	void set_follow_focus(bool p_follow);
+
+	void set_wheel_scroll_sensibility(int p_sensibility);
+	int get_wheel_scroll_sensibility() const;
 
 	HScrollBar *get_h_scroll_bar();
 	VScrollBar *get_v_scroll_bar();

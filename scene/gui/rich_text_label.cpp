@@ -1761,14 +1761,12 @@ void RichTextLabel::gui_input(const Ref<InputEvent> &p_event) {
 			}
 		}
 
-		if (b->get_button_index() == MouseButton::WHEEL_UP) {
+		if ((b->get_button_index() == MouseButton::WHEEL_UP || b->get_button_index() == MouseButton::WHEEL_DOWN) && b->is_pressed()) {
 			if (scroll_active) {
-				vscroll->set_value(vscroll->get_value() - vscroll->get_page() * b->get_factor() * 0.5 / 8);
-			}
-		}
-		if (b->get_button_index() == MouseButton::WHEEL_DOWN) {
-			if (scroll_active) {
-				vscroll->set_value(vscroll->get_value() + vscroll->get_page() * b->get_factor() * 0.5 / 8);
+				float scroll_amount = vscroll->get_page() * b->get_factor() / 24 * wheel_scroll_sensibility;
+				int direction = b->get_button_index() == MouseButton::WHEEL_UP ? -1 : 1;
+				int multiplier = b->is_alt_pressed() ? 5 : 1;
+				vscroll->set_value(vscroll->get_value() + scroll_amount * multiplier * direction);
 			}
 		}
 	}
@@ -2944,6 +2942,16 @@ void RichTextLabel::set_scroll_active(bool p_active) {
 
 bool RichTextLabel::is_scroll_active() const {
 	return scroll_active;
+}
+
+void RichTextLabel::set_wheel_scroll_sensibility(int p_sensibility) {
+	ERR_FAIL_COND(!vscroll);
+	wheel_scroll_sensibility = p_sensibility;
+	vscroll->set_wheel_scroll_sensibility(p_sensibility);
+}
+
+int RichTextLabel::get_wheel_scroll_sensibility() const {
+	return wheel_scroll_sensibility;
 }
 
 void RichTextLabel::set_scroll_follow(bool p_follow) {

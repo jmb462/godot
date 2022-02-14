@@ -710,6 +710,10 @@ void SceneTreeEditor::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			_update_tree();
 		} break;
+		case NOTIFICATION_READY:
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+			tree->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
+		} break;
 	}
 }
 

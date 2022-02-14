@@ -85,6 +85,7 @@ class ScrollBar : public Range {
 	bool scrolling = false;
 	double target_scroll = 0.0;
 	bool smooth_scroll_enabled = false;
+	int wheel_scroll_sensibility = 3;
 
 	void _drag_node_exit();
 	void _drag_node_input(const Ref<InputEvent> &p_input);
@@ -106,6 +107,9 @@ public:
 
 	void set_smooth_scroll_enabled(bool p_enable);
 	bool is_smooth_scroll_enabled() const;
+
+	void set_wheel_scroll_sensibility(int p_sensibility);
+	int get_wheel_scroll_sensibility() const;
 
 	virtual Size2 get_minimum_size() const override;
 	ScrollBar(Orientation p_orientation = VERTICAL);

@@ -54,13 +54,11 @@ void ScrollBar::gui_input(const Ref<InputEvent> &p_event) {
 	if (b.is_valid()) {
 		accept_event();
 
-		if (b->get_button_index() == MouseButton::WHEEL_DOWN && b->is_pressed()) {
-			set_value(get_value() + get_page() / 4.0);
-			accept_event();
-		}
-
-		if (b->get_button_index() == MouseButton::WHEEL_UP && b->is_pressed()) {
-			set_value(get_value() - get_page() / 4.0);
+		if ((b->get_button_index() == MouseButton::WHEEL_UP || b->get_button_index() == MouseButton::WHEEL_DOWN) && b->is_pressed()) {
+			float scroll_amount = get_page() * b->get_factor() / 24 * wheel_scroll_sensibility;
+			int direction = b->get_button_index() == MouseButton::WHEEL_UP ? -1 : 1;
+			int multiplier = b->is_alt_pressed() ? 5 : 1;
+			set_value(get_value() + scroll_amount * multiplier * direction);
 			accept_event();
 		}
 
@@ -616,6 +614,14 @@ void ScrollBar::set_smooth_scroll_enabled(bool p_enable) {
 
 bool ScrollBar::is_smooth_scroll_enabled() const {
 	return smooth_scroll_enabled;
+}
+
+void ScrollBar::set_wheel_scroll_sensibility(int p_sensibility) {
+	wheel_scroll_sensibility = p_sensibility;
+}
+
+int ScrollBar::get_wheel_scroll_sensibility() const {
+	return wheel_scroll_sensibility;
 }
 
 void ScrollBar::_bind_methods() {

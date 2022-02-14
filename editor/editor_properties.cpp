@@ -3204,6 +3204,7 @@ void EditorPropertyResource::update_property() {
 
 				sub_inspector->set_sub_inspector(true);
 				sub_inspector->set_enable_capitalize_paths(bool(EDITOR_GET("interface/inspector/capitalize_properties")));
+				sub_inspector->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
 
 				sub_inspector->connect("property_keyed", callable_mp(this, &EditorPropertyResource::_sub_inspector_property_keyed));
 				sub_inspector->connect("resource_selected", callable_mp(this, &EditorPropertyResource::_sub_inspector_resource_selected));
@@ -3286,6 +3287,11 @@ void EditorPropertyResource::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			if (!updating_theme) {
 				_update_property_bg();
+			}
+		} break;
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+			if (sub_inspector != nullptr) {
+				sub_inspector->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
 			}
 		} break;
 	}

@@ -3428,6 +3428,7 @@ void EditorInspector::_node_removed(Node *p_node) {
 void EditorInspector::_notification(int p_what) {
 	if (p_what == NOTIFICATION_READY) {
 		EditorFeatureProfileManager::get_singleton()->connect("current_feature_profile_changed", callable_mp(this, &EditorInspector::_feature_profile_changed));
+		set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
 		set_process(is_visible_in_tree());
 		_update_inspector_bg();
 	}
@@ -3497,6 +3498,7 @@ void EditorInspector::_notification(int p_what) {
 	}
 
 	if (p_what == EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED) {
+		set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
 		_update_inspector_bg();
 
 		update_tree();

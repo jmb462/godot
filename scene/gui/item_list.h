@@ -93,6 +93,8 @@ private:
 	bool auto_height = false;
 	float auto_height_value = 0.0;
 
+	int wheel_scroll_sensibility = 3;
+
 	Vector<Item> items;
 	Vector<int> separators;
 
@@ -208,6 +210,9 @@ public:
 	void remove_item(int p_idx);
 
 	void clear();
+
+	void set_wheel_scroll_sensibility(int p_sensibility);
+	int get_wheel_scroll_sensibility() const;
 
 	void set_fixed_column_width(int p_size);
 	int get_fixed_column_width() const;

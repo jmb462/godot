@@ -459,6 +459,10 @@ private:
 	float target_v_scroll = 0.0;
 	float v_scroll_speed = 80.0;
 
+	// Wheel scroll sensibility
+	int wheel_scroll_sensibility = 3;
+	bool speed_scroll_key_pressed = false;
+
 	// Scrolling.
 	bool scrolling = false;
 	bool updating_scrolls = false;
@@ -842,6 +846,9 @@ public:
 
 	void set_v_scroll_speed(float p_speed);
 	float get_v_scroll_speed() const;
+
+	void set_wheel_scroll_sensibility(int p_sensibility);
+	int get_wheel_scroll_sensibility() const;
 
 	double get_scroll_pos_for_line(int p_line, int p_wrap_index = 0) const;
 

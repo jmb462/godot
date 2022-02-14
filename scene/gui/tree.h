@@ -559,6 +559,8 @@ private:
 	bool h_scroll_enabled = true;
 	bool v_scroll_enabled = true;
 
+	int wheel_scroll_sensibility;
+
 	Size2 get_internal_min_size() const;
 	void update_cache();
 	void update_scrollbars();
@@ -688,6 +690,9 @@ public:
 	bool is_h_scroll_enabled() const;
 	void set_v_scroll_enabled(bool p_enable);
 	bool is_v_scroll_enabled() const;
+
+	void set_wheel_scroll_sensibility(int p_sensibility);
+	int get_wheel_scroll_sensibility() const;
 
 	void set_cursor_can_exit_tree(bool p_enable);
 

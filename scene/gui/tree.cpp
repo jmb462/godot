@@ -3432,21 +3432,16 @@ void Tree::gui_input(const Ref<InputEvent> &p_event) {
 				}
 
 			} break;
-			case MouseButton::WHEEL_UP: {
-				double prev_value = v_scroll->get_value();
-				v_scroll->set_value(v_scroll->get_value() - v_scroll->get_page() * b->get_factor() / 8);
-				if (v_scroll->get_value() != prev_value) {
-					accept_event();
-				}
-
-			} break;
+			case MouseButton::WHEEL_UP:
 			case MouseButton::WHEEL_DOWN: {
 				double prev_value = v_scroll->get_value();
-				v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() * b->get_factor() / 8);
+				float scroll_amount = v_scroll->get_page() * b->get_factor() / 24 * wheel_scroll_sensibility;
+				int direction = b->get_button_index() == MouseButton::WHEEL_UP ? -1 : 1;
+				int multiplier = b->is_alt_pressed() ? 5 : 1;
+				v_scroll->set_value(prev_value + scroll_amount * multiplier * direction);
 				if (v_scroll->get_value() != prev_value) {
 					accept_event();
 				}
-
 			} break;
 			default:
 				break;
@@ -4459,6 +4454,18 @@ void Tree::set_v_scroll_enabled(bool p_enable) {
 
 bool Tree::is_v_scroll_enabled() const {
 	return v_scroll_enabled;
+}
+
+void Tree::set_wheel_scroll_sensibility(int p_sensibility) {
+	ERR_FAIL_COND(!h_scroll);
+	ERR_FAIL_COND(!v_scroll);
+	wheel_scroll_sensibility = p_sensibility;
+	h_scroll->set_wheel_scroll_sensibility(p_sensibility);
+	v_scroll->set_wheel_scroll_sensibility(p_sensibility);
+}
+
+int Tree::get_wheel_scroll_sensibility() const {
+	return wheel_scroll_sensibility;
 }
 
 TreeItem *Tree::_search_item_text(TreeItem *p_at, const String &p_find, int *r_col, bool p_selectable, bool p_backwards) {

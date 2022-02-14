@@ -379,7 +379,9 @@ void FileSystemDock::_notification(int p_what) {
 				_update_tree(Vector<String>(), true);
 			}
 		} break;
-
+		case NOTIFICATION_READY: {
+			files->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
+		} break;
 		case NOTIFICATION_PROCESS: {
 			if (EditorFileSystem::get_singleton()->is_scanning()) {
 				scanning_progress->set_value(EditorFileSystem::get_singleton()->get_scanning_progress() * 100);
@@ -433,6 +435,8 @@ void FileSystemDock::_notification(int p_what) {
 			file_list_search_box->set_right_icon(get_theme_icon(SNAME("Search"), SNAME("EditorIcons")));
 			file_list_search_box->set_clear_button_enabled(true);
 			file_list_button_sort->set_icon(get_theme_icon(SNAME("Sort"), SNAME("EditorIcons")));
+
+			files->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
 
 			// Update always show folders.
 			bool new_always_show_folders = bool(EditorSettings::get_singleton()->get("docks/filesystem/always_show_folders"));

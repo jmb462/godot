@@ -97,6 +97,10 @@ void EditorLog::_notification(int p_what) {
 			_update_theme();
 			_rebuild_log();
 		} break;
+		case NOTIFICATION_READY:
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+			log->set_wheel_scroll_sensibility(int(EDITOR_GET("interface/editor/wheel_scroll_sensitivity")));
+		} break;
 		default:
 			break;
 	}
