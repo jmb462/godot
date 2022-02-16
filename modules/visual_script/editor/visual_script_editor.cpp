@@ -3892,6 +3892,7 @@ void VisualScriptEditor::_default_value_edited(Node *p_button, int p_id, int p_i
 		} else {
 			default_value_edit->popup();
 		}
+		default_value_edit->focus_first_value();
 	}
 
 	editing_id = p_id;

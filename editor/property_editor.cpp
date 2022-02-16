@@ -295,6 +295,13 @@ Variant CustomPropertyEditor::get_variant() const {
 
 String CustomPropertyEditor::get_name() const {
 	return name;
+
+}
+
+void CustomPropertyEditor::focus_first_value() {
+	if (value_editor[0] != nullptr) {
+		value_editor[0]->grab_focus();
+	}
 }
 
 bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::Type p_type, const Variant &p_variant, int p_hint, String p_hint_text) {
