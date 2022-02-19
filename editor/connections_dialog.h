@@ -197,8 +197,9 @@ class ConnectionsDock : public VBoxContainer {
 	Map<StringName, Map<StringName, String>> descr_cache;
 
 	void _filter_changed(const String &p_text);
+	void _signal_dropped(const NodePath p_dest_path);
 
-	void _make_or_edit_connection();
+	void _make_or_edit_connection(const NodePath p_dest_path, const StringName p_signal, const StringName p_method, int p_unbinds, bool p_deferred, bool p_oneshot);
 	void _connect(ConnectDialog::ConnectionData p_cd);
 	void _disconnect(TreeItem &p_item);
 	void _disconnect_all();
@@ -207,6 +208,7 @@ class ConnectionsDock : public VBoxContainer {
 	void _tree_item_activated();
 	bool _is_item_signal(TreeItem &p_item);
 
+	String _get_callback_name(const String p_node_name, const String p_signal_name) const;
 	void _open_connection_dialog(TreeItem &p_item);
 	void _open_connection_dialog(ConnectDialog::ConnectionData p_cd);
 	void _go_to_script(TreeItem &p_item);
@@ -215,6 +217,8 @@ class ConnectionsDock : public VBoxContainer {
 	void _handle_slot_menu_option(int p_option);
 	void _rmb_pressed(Vector2 p_position);
 	void _close();
+
+	Variant get_drag_data_fw(const Point2 &p_point, Control *p_from);
 
 protected:
 	void _connect_pressed();

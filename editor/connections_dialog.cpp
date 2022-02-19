@@ -132,7 +132,7 @@ void ConnectDialog::ok_pressed() {
 			return;
 		}
 	}
-	emit_signal(SNAME("connected"));
+	emit_signal(SNAME("connected"), get_dst_path(), get_signal_name(), get_dst_method_name(), get_unbinds(), get_deferred(), get_oneshot());
 	hide();
 }
 
@@ -573,30 +573,40 @@ void ConnectionsDock::_filter_changed(const String &p_text) {
 	update_tree();
 }
 
+void ConnectionsDock::_signal_dropped(const NodePath p_dest_path) {
+	print_line(vformat("Drop on : %s", get_node(p_dest_path)));
+	TreeItem *item = tree->get_selected();
+	if (!item || !selected_node) {
+		return;
+	}
+	String signal = item->get_metadata(0).get("name");
+	String method = _get_callback_name(selected_node->get_name(), signal);
+	_make_or_edit_connection(p_dest_path, signal, method, 0, false, false);
+}
+
 /*
  * Post-ConnectDialog callback for creating/editing connections.
  * Creates or edits connections based on state of the ConnectDialog when "Connect" is pressed.
  */
-void ConnectionsDock::_make_or_edit_connection() {
+void ConnectionsDock::_make_or_edit_connection(const NodePath p_dest_path, const StringName p_signal, const StringName p_method, int p_unbinds, bool p_deferred, bool p_oneshot) {
 	TreeItem *it = tree->get_selected();
 	ERR_FAIL_COND(!it);
 
-	NodePath dst_path = connect_dialog->get_dst_path();
-	Node *target = selected_node->get_node(dst_path);
+	Node *target = selected_node->get_node(p_dest_path);
 	ERR_FAIL_COND(!target);
 
+	ERR_FAIL_COND(!selected_node);
+
 	ConnectDialog::ConnectionData cd;
-	cd.source = connect_dialog->get_source();
+	cd.source = selected_node;
 	cd.target = target;
-	cd.signal = connect_dialog->get_signal_name();
-	cd.method = connect_dialog->get_dst_method_name();
-	cd.unbinds = connect_dialog->get_unbinds();
+	cd.signal = p_signal;
+	cd.method = p_method;
+	cd.unbinds = p_unbinds;
 	if (cd.unbinds == 0) {
 		cd.binds = connect_dialog->get_binds();
 	}
-	bool b_deferred = connect_dialog->get_deferred();
-	bool b_oneshot = connect_dialog->get_oneshot();
-	cd.flags = CONNECT_PERSIST | (b_deferred ? CONNECT_DEFERRED : 0) | (b_oneshot ? CONNECT_ONESHOT : 0);
+	cd.flags = CONNECT_PERSIST | (p_deferred ? CONNECT_DEFERRED : 0) | (p_oneshot ? CONNECT_ONESHOT : 0);
 
 	// Conditions to add function: must have a script and must not have the method already
 	// (in the class, the script itself, or inherited).
@@ -782,34 +792,36 @@ void ConnectionsDock::_open_connection_dialog(TreeItem &p_item) {
 		dst_node = _find_first_script(get_tree()->get_edited_scene_root(), get_tree()->get_edited_scene_root());
 	}
 
+	ConnectDialog::ConnectionData cd;
+	cd.source = selected_node;
+	cd.signal = StringName(signal_name_ref);
+	cd.target = dst_node;
+	cd.method = StringName(_get_callback_name(node_name, signal_name));
+	connect_dialog->popup_dialog(signal_name_ref);
+	connect_dialog->init(cd);
+	connect_dialog->set_title(TTR("Connect a Signal to a Method"));
+}
+
+String ConnectionsDock::_get_callback_name(const String p_node_name, const String p_signal_name) const {
 	Dictionary subst;
 
-	String s = node_name.capitalize().replace(" ", "");
+	String s = p_node_name.capitalize().replace(" ", "");
 	subst["NodeName"] = s;
 	if (!s.is_empty()) {
 		s[0] = s.to_lower()[0];
 	}
 	subst["nodeName"] = s;
-	subst["node_name"] = node_name.capitalize().replace(" ", "_").to_lower();
+	subst["node_name"] = p_node_name.capitalize().replace(" ", "_").to_lower();
 
-	s = signal_name.capitalize().replace(" ", "");
+	s = p_signal_name.capitalize().replace(" ", "");
 	subst["SignalName"] = s;
 	if (!s.is_empty()) {
 		s[0] = s.to_lower()[0];
 	}
 	subst["signalName"] = s;
-	subst["signal_name"] = signal_name.capitalize().replace(" ", "_").to_lower();
+	subst["signal_name"] = p_signal_name.capitalize().replace(" ", "_").to_lower();
 
-	String dst_method = String(EDITOR_GET("interface/editors/default_signal_callback_name")).format(subst);
-
-	ConnectDialog::ConnectionData cd;
-	cd.source = selected_node;
-	cd.signal = StringName(signal_name_ref);
-	cd.target = dst_node;
-	cd.method = StringName(dst_method);
-	connect_dialog->popup_dialog(signal_name_ref);
-	connect_dialog->init(cd);
-	connect_dialog->set_title(TTR("Connect a Signal to a Method"));
+	return String(EDITOR_GET("interface/editors/default_signal_callback_name")).format(subst);
 }
 
 /*
@@ -919,6 +931,39 @@ void ConnectionsDock::_close() {
 	hide();
 }
 
+Variant ConnectionsDock::get_drag_data_fw(const Point2 &p_point, Control *p_from) {
+	TreeItem *item_selected = tree->get_selected();
+
+	if (!item_selected) {
+		return Variant();
+	}
+
+	Dictionary metadata = Dictionary(item_selected->get_metadata(0));
+
+	if (!metadata.has("name")) {
+		return Variant();
+	}
+
+	String signal_name = metadata.get("name", "");
+
+	Ref<Texture2D> icon = Control::get_theme_icon(SNAME("Signal"), SNAME("EditorIcons"));
+
+	HBoxContainer *hb = memnew(HBoxContainer);
+	TextureRect *tf = memnew(TextureRect);
+	tf->set_texture(icon);
+	tf->set_stretch_mode(TextureRect::STRETCH_KEEP_CENTERED);
+	hb->add_child(tf);
+	Label *label = memnew(Label(item_selected->get_text(0)));
+	hb->add_child(label);
+	set_drag_preview(hb);
+
+	Dictionary drag_data;
+	drag_data["type"] = "signal";
+	drag_data["signal"] = signal_name;
+
+	return drag_data;
+}
+
 void ConnectionsDock::_connect_pressed() {
 	TreeItem *item = tree->get_selected();
 	if (!item) {
@@ -949,6 +994,7 @@ void ConnectionsDock::_notification(int p_what) {
 
 void ConnectionsDock::_bind_methods() {
 	ClassDB::bind_method("update_tree", &ConnectionsDock::update_tree);
+	ClassDB::bind_method(D_METHOD("_get_drag_data_fw"), &ConnectionsDock::get_drag_data_fw);
 }
 
 void ConnectionsDock::set_node(Node *p_node) {
@@ -1165,6 +1211,9 @@ ConnectionsDock::ConnectionsDock() {
 	vbc->add_child(tree);
 	tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	tree->set_allow_rmb_select(true);
+	tree->set_drag_forwarding(this);
+
+	SceneTreeDock::get_singleton()->get_tree_editor()->connect("signal_dropped", callable_mp(this, &ConnectionsDock::_signal_dropped));
 
 	connect_button = memnew(Button);
 	HBoxContainer *hb = memnew(HBoxContainer);
