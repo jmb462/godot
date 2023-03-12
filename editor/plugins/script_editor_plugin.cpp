@@ -1600,7 +1600,7 @@ void ScriptEditor::_notification(int p_what) {
 			FileSystemDock::get_singleton()->connect("file_removed", callable_mp(this, &ScriptEditor::_file_removed));
 			script_list->connect("item_selected", callable_mp(this, &ScriptEditor::_script_selected));
 
-			members_overview->connect("item_selected", callable_mp(this, &ScriptEditor::_members_overview_selected));
+			members_overview->connect("cell_selected", callable_mp(this, &ScriptEditor::_members_overview_selected));
 			help_overview->connect("item_selected", callable_mp(this, &ScriptEditor::_help_overview_selected));
 			script_split->connect("dragged", callable_mp(this, &ScriptEditor::_split_dragged));
 			list_split->connect("dragged", callable_mp(this, &ScriptEditor::_split_dragged));
@@ -1747,17 +1747,18 @@ void ScriptEditor::get_breakpoints(List<String> *p_breakpoints) {
 	}
 }
 
-void ScriptEditor::_members_overview_selected(int p_idx) {
+void ScriptEditor::_members_overview_selected() {
 	ScriptEditorBase *se = _get_current_editor();
 	if (!se) {
 		return;
 	}
 	// Go to the member's line and reset the cursor column. We can't change scroll_position
 	// directly until we have gone to the line first, since code might be folded.
-	se->goto_line(members_overview->get_item_metadata(p_idx));
+	TreeItem *item = members_overview->get_selected();
+	se->goto_line(item->get_meta("__line"));
 	Dictionary state = se->get_edit_state();
 	state["column"] = 0;
-	state["scroll_position"] = members_overview->get_item_metadata(p_idx);
+	state["scroll_position"] = item->get_meta("__line");
 	se->set_edit_state(state);
 }
 
@@ -1864,22 +1865,88 @@ void ScriptEditor::_toggle_members_overview_alpha_sort(bool p_alphabetic_sort) {
 void ScriptEditor::_update_members_overview() {
 	members_overview->clear();
 
+	TreeItem *root = members_overview->create_item();
+
 	ScriptEditorBase *se = _get_current_editor();
 	if (!se) {
 		return;
 	}
 
+	Vector<String> regions = se->get_code_regions();
+
 	Vector<String> functions = se->get_functions();
-	if (EDITOR_GET("text_editor/script_list/sort_members_outline_alphabetically")) {
-		functions.sort();
+
+	Vector<String> root_functions;
+	Vector<String> root_elements;
+
+	// Get all root functions (not in a code region)
+	for (const String &function : functions) {
+		int function_line = function.get_slice(":", 1).to_int();
+		bool is_root_function = true;
+		for (const String &region : regions) {
+			String region_name = region.get_slice(":", 0);
+			int region_begin = region.get_slice(":", 1).to_int();
+			int region_end = region.get_slice(":", 2).to_int();
+
+			if (function_line > region_begin && function_line < region_end) {
+				is_root_function = false;
+			}
+		}
+		if (is_root_function) {
+			root_functions.push_back(function);
+		}
 	}
 
-	for (int i = 0; i < functions.size(); i++) {
+	// Get all root tree elements (code region and root functions ordered by line number)
+	int region_index = 0;
+	int function_index = 0;
+
+	while (region_index < regions.size() || function_index < root_functions.size()) {
+		int region_line = region_index < regions.size() ? regions[region_index].get_slice(":", 1).to_int() : -1;
+		int function_line = function_index < root_functions.size() ? root_functions[function_index].get_slice(":", 1).to_int() - 1 : -1;
+
+		if ((region_line != -1 && region_line < function_line) || function_line == -1) {
+			root_elements.push_back(regions[region_index]);
+			region_index++;
+		}
+
+		if ((function_line != -1 && function_line < region_line) || region_line == -1) {
+			root_elements.push_back(root_functions[function_index]);
+			function_index++;
+		}
+	}
+
+	if (EDITOR_GET("text_editor/script_list/sort_members_outline_alphabetically")) {
+		functions.sort();
+		root_elements.sort();
+	}
+
+	// Build tree
+	for (const String &root_element : root_elements) {
 		String filter = filter_methods->get_text();
-		String name = functions[i].get_slice(":", 0);
-		if (filter.is_empty() || filter.is_subsequence_ofn(name)) {
-			members_overview->add_item(name);
-			members_overview->set_item_metadata(-1, functions[i].get_slice(":", 1).to_int() - 1);
+		String root_name = root_element.get_slice(":", 0);
+		bool is_region = root_element.get_slice_count(":") > 2;
+		int root_begin = root_element.get_slice(":", 1).to_int() - 1;
+		int region_end = is_region ? root_element.get_slice(":", 2).to_int() - 1 : -1;
+		if (filter.is_empty() || filter.is_subsequence_ofn(root_name)) {
+			TreeItem *region_item = members_overview->create_item(root);
+			region_item->set_text(0, root_name.is_empty() ? "Unnamed region" : root_name);
+			region_item->set_meta("__line", root_begin);
+
+			if (is_region) {
+				region_item->set_icon(0, get_theme_icon(SNAME("Folder"), SNAME("EditorIcons")));
+				for (const String &function : functions) {
+					String function_name = function.get_slice(":", 0);
+					int function_line = function.get_slice(":", 1).to_int();
+					if (function_line >= root_begin && function_line <= region_end) {
+						if (filter.is_empty() || filter.is_subsequence_ofn(function_name)) {
+							TreeItem *function_item = members_overview->create_item(region_item);
+							function_item->set_text(0, function_name);
+							function_item->set_meta("__line", function_line - 1);
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -3844,9 +3911,10 @@ ScriptEditor::ScriptEditor() {
 	filter_methods->connect("text_changed", callable_mp(this, &ScriptEditor::_filter_methods_text_changed));
 	overview_vbox->add_child(filter_methods);
 
-	members_overview = memnew(ItemList);
+	members_overview = memnew(Tree);
 	overview_vbox->add_child(members_overview);
-
+	members_overview->set_columns(1);
+	members_overview->set_hide_root(true);
 	members_overview->set_allow_reselect(true);
 	members_overview->set_custom_minimum_size(Size2(0, 60) * EDSCALE); //need to give a bit of limit to avoid it from disappearing
 	members_overview->set_v_size_flags(SIZE_EXPAND_FILL);

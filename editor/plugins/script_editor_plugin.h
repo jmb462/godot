@@ -155,6 +155,7 @@ public:
 	virtual void apply_code() = 0;
 	virtual Ref<Resource> get_edited_resource() const = 0;
 	virtual Vector<String> get_functions() = 0;
+	virtual Vector<String> get_code_regions() = 0;
 	virtual void set_edited_resource(const Ref<Resource> &p_res) = 0;
 	virtual void enable_editor(Control *p_shortcut_context = nullptr) = 0;
 	virtual void reload_text() = 0;
@@ -277,7 +278,7 @@ class ScriptEditor : public PanelContainer {
 
 	ItemList *script_list = nullptr;
 	HSplitContainer *script_split = nullptr;
-	ItemList *members_overview = nullptr;
+	Tree *members_overview = nullptr;
 	LineEdit *filter_scripts = nullptr;
 	LineEdit *filter_methods = nullptr;
 	VBoxContainer *scripts_vbox = nullptr;
@@ -424,7 +425,7 @@ class ScriptEditor : public PanelContainer {
 	void _update_script_names();
 	bool _sort_list_on_update;
 
-	void _members_overview_selected(int p_idx);
+	void _members_overview_selected();
 	void _script_selected(int p_idx);
 
 	void _update_help_overview_visibility();

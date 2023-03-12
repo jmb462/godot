@@ -2691,6 +2691,93 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 	memdelete(code_edit);
 }
 
+TEST_CASE("[SceneTree][CodeEdit] region folding") {
+	CodeEdit *code_edit = memnew(CodeEdit);
+	SceneTree::get_singleton()->get_root()->add_child(code_edit);
+	code_edit->grab_focus();
+
+	SUBCASE("[CodeEdit] region folding") {
+		code_edit->set_line_folding_enabled(true);
+
+		// Region tag detection
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("#", "");
+		code_edit->set_text("#region region_name\nline2\n#endregion");
+		CHECK(code_edit->is_line_code_region_opening_tag(0));
+		CHECK_FALSE(code_edit->is_line_code_region_opening_tag(1));
+		CHECK_FALSE(code_edit->is_line_code_region_opening_tag(2));
+		CHECK_FALSE(code_edit->is_line_code_region_closing_tag(0));
+		CHECK_FALSE(code_edit->is_line_code_region_closing_tag(1));
+		CHECK(code_edit->is_line_code_region_closing_tag(2));
+
+		// Region creation
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("#", "");
+		code_edit->set_text("line1\nline2\nline3");
+		code_edit->select(1, 0, 1, 4);
+		code_edit->create_code_region();
+		CHECK(code_edit->is_line_code_region_opening_tag(1));
+		CHECK(code_edit->get_line(2).contains("line2"));
+		CHECK(code_edit->is_line_code_region_closing_tag(3));
+
+		// Region tag with # comment delimiter
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("#", "");
+		CHECK(code_edit->get_code_region_opening_tag() == "#region");
+		CHECK(code_edit->get_code_region_closing_tag() == "#endregion");
+
+		// Region tag with // comment delimiter
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("//", "");
+		CHECK(code_edit->get_code_region_opening_tag() == "//region");
+		CHECK(code_edit->get_code_region_closing_tag() == "//endregion");
+
+		// Fold region
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("#", "");
+		code_edit->set_text("#region region_name\nline2\nline3\n#endregion\nvisible line");
+		CHECK(code_edit->can_fold_line(0));
+		for (int i = 1; i < 5; i++) {
+			CHECK_FALSE(code_edit->can_fold_line(i));
+		}
+		for (int i = 0; i < 5; i++) {
+			CHECK_FALSE(code_edit->is_line_folded(i));
+		}
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 4);
+
+		// Not ending region can't be folded
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("#", "");
+		code_edit->set_text("#region region_name\nline2\nline3\n#bad_end_tag\nvisible line");
+		CHECK_FALSE(code_edit->can_fold_line(0));
+
+		// Region containing a nested region is ignored
+		ERR_PRINT_OFF;
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("#", "");
+		code_edit->set_text("#region region1\n#region region2\nline3\n#endregion\n#endregion");
+		CHECK_FALSE(code_edit->can_fold_line(0));
+		CHECK(code_edit->can_fold_line(1));
+		code_edit->fold_line(1);
+		CHECK(code_edit->get_next_visible_line_offset_from(2, 1) == 3);
+		ERR_PRINT_ON;
+
+		// Unfolding a line inside a region unfold whole region
+		code_edit->clear_comment_delimiters();
+		code_edit->add_comment_delimiter("#", "");
+		code_edit->set_text("#region region\ninside\nline3\n#endregion\nvisible");
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 4);
+		code_edit->unfold_line(1);
+		CHECK_FALSE(code_edit->is_line_folded(0));
+	}
+
+	memdelete(code_edit);
+}
+
 TEST_CASE("[SceneTree][CodeEdit] completion") {
 	CodeEdit *code_edit = memnew(CodeEdit);
 	SceneTree::get_singleton()->get_root()->add_child(code_edit);

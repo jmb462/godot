@@ -66,6 +66,7 @@ class ScriptTextEditor : public ScriptEditorBase {
 	bool editor_enabled = false;
 
 	Vector<String> functions;
+	Vector<String> code_regions;
 	List<ScriptLanguage::Warning> warnings;
 	List<ScriptLanguage::ScriptError> errors;
 	HashSet<int> safe_lines;
@@ -97,6 +98,7 @@ class ScriptTextEditor : public ScriptEditorBase {
 	Color safe_line_number_color = Color(1, 1, 1);
 
 	Color marked_line_color = Color(1, 1, 1);
+	Color folded_code_region_color = Color(1, 1, 1);
 
 	PopupPanel *color_panel = nullptr;
 	ColorPicker *color_picker = nullptr;
@@ -131,6 +133,7 @@ class ScriptTextEditor : public ScriptEditorBase {
 		EDIT_EVALUATE,
 		EDIT_TOGGLE_FOLD_LINE,
 		EDIT_FOLD_ALL_LINES,
+		EDIT_CREATE_CODE_REGION,
 		EDIT_UNFOLD_ALL_LINES,
 		SEARCH_FIND,
 		SEARCH_FIND_NEXT,
@@ -211,6 +214,7 @@ public:
 	virtual void set_edited_resource(const Ref<Resource> &p_res) override;
 	virtual void enable_editor(Control *p_shortcut_context = nullptr) override;
 	virtual Vector<String> get_functions() override;
+	virtual Vector<String> get_code_regions() override;
 	virtual void reload_text() override;
 	virtual String get_name() override;
 	virtual Ref<Texture2D> get_theme_icon() override;

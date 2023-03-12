@@ -2971,6 +2971,7 @@ void TextEdit::_update_theme_item_cache() {
 	/* Internal API for CodeEdit */
 	theme_cache.brace_mismatch_color = get_theme_color(SNAME("brace_mismatch_color"), SNAME("CodeEdit"));
 	theme_cache.code_folding_color = get_theme_color(SNAME("code_folding_color"), SNAME("CodeEdit"));
+	theme_cache.folded_code_region_color = get_theme_color(SNAME("folded_code_region_color"), SNAME("CodeEdit"));
 	theme_cache.folded_eol_icon = get_theme_icon(SNAME("folded_eol_icon"), SNAME("CodeEdit"));
 
 	/* Search */

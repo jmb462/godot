@@ -324,6 +324,10 @@ Vector<String> TextEditor::get_functions() {
 	return Vector<String>();
 }
 
+Vector<String> TextEditor::get_code_regions() {
+	return Vector<String>();
+}
+
 bool TextEditor::show_members_overview() {
 	return true;
 }

@@ -1949,6 +1949,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	const Color breakpoint_color = dark_theme ? error_color : Color(1, 0.27, 0.2, 1);
 	const Color executing_line_color = Color(0.98, 0.89, 0.27);
 	const Color code_folding_color = alpha3;
+	const Color folded_code_region_color = Color(0.64, 0.84, 1.0, 0.47);
 	const Color search_result_color = alpha1;
 	const Color search_result_border_color = dark_theme ? Color(0.41, 0.61, 0.91, 0.38) : Color(0, 0.4, 1, 0.38);
 
@@ -1989,6 +1990,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 		setting->set_initial_value("text_editor/theme/highlighting/breakpoint_color", breakpoint_color, true);
 		setting->set_initial_value("text_editor/theme/highlighting/executing_line_color", executing_line_color, true);
 		setting->set_initial_value("text_editor/theme/highlighting/code_folding_color", code_folding_color, true);
+		setting->set_initial_value("text_editor/theme/highlighting/folded_code_region_color", folded_code_region_color, true);
 		setting->set_initial_value("text_editor/theme/highlighting/search_result_color", search_result_color, true);
 		setting->set_initial_value("text_editor/theme/highlighting/search_result_border_color", search_result_border_color, true);
 	} else if (text_editor_color_theme == "Godot 2") {
@@ -2008,6 +2010,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_icon("space", "CodeEdit", theme->get_icon(SNAME("GuiSpace"), SNAME("EditorIcons")));
 	theme->set_icon("folded", "CodeEdit", theme->get_icon(SNAME("CodeFoldedRightArrow"), SNAME("EditorIcons")));
 	theme->set_icon("can_fold", "CodeEdit", theme->get_icon(SNAME("CodeFoldDownArrow"), SNAME("EditorIcons")));
+	theme->set_icon("folded_region", "CodeEdit", theme->get_icon(SNAME("Folder"), SNAME("EditorIcons")));
 	theme->set_icon("executing_line", "CodeEdit", theme->get_icon(SNAME("TextEditorPlay"), SNAME("EditorIcons")));
 	theme->set_icon("breakpoint", "CodeEdit", theme->get_icon(SNAME("Breakpoint"), SNAME("EditorIcons")));
 
@@ -2033,6 +2036,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("breakpoint_color", "CodeEdit", EDITOR_GET("text_editor/theme/highlighting/breakpoint_color"));
 	theme->set_color("executing_line_color", "CodeEdit", EDITOR_GET("text_editor/theme/highlighting/executing_line_color"));
 	theme->set_color("code_folding_color", "CodeEdit", EDITOR_GET("text_editor/theme/highlighting/code_folding_color"));
+	theme->set_color("folded_code_region_color", "CodeEdit", EDITOR_GET("text_editor/theme/highlighting/folded_code_region_color"));
 	theme->set_color("search_result_color", "CodeEdit", EDITOR_GET("text_editor/theme/highlighting/search_result_color"));
 	theme->set_color("search_result_border_color", "CodeEdit", EDITOR_GET("text_editor/theme/highlighting/search_result_border_color"));
 

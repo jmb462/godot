@@ -598,6 +598,9 @@
 		<theme_item name="executing_line_color" data_type="color" type="Color" default="Color(0.98, 0.89, 0.27, 1)">
 			[Color] of the executing icon for executing lines.
 		</theme_item>
+		<theme_item name="folded_code_region_color" data_type="color" type="Color" default="Color(0.64, 0.84, 1, 0.47)">
+			[Color] of background line highlight for folded code region.
+		</theme_item>
 		<theme_item name="font_color" data_type="color" type="Color" default="Color(0.875, 0.875, 0.875, 1)">
 			Sets the font [Color].
 		</theme_item>
@@ -670,6 +673,9 @@
 		</theme_item>
 		<theme_item name="folded_eol_icon" data_type="icon" type="Texture2D">
 			Sets a custom [Texture2D] to draw at the end of a folded line.
+		</theme_item>
+		<theme_item name="folded_region" data_type="icon" type="Texture2D">
+			Sets a custom [Texture2D] to draw in the line folding gutter when a code region is folded and can be unfolded.
 		</theme_item>
 		<theme_item name="space" data_type="icon" type="Texture2D">
 			Sets a custom [Texture2D] for space text characters.

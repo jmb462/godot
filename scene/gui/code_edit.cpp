@@ -225,8 +225,10 @@ void CodeEdit::_update_theme_item_cache() {
 
 	/* Gutters */
 	theme_cache.code_folding_color = get_theme_color(SNAME("code_folding_color"));
+	theme_cache.folded_code_region_color = get_theme_color(SNAME("folded_code_region_color"));
 	theme_cache.can_fold_icon = get_theme_icon(SNAME("can_fold"));
 	theme_cache.folded_icon = get_theme_icon(SNAME("folded"));
+	theme_cache.folded_region_icon = get_theme_icon("folded_region");
 	theme_cache.folded_eol_icon = get_theme_icon(SNAME("folded_eol_icon"));
 
 	theme_cache.breakpoint_color = get_theme_color(SNAME("breakpoint_color"));
@@ -1461,6 +1463,10 @@ void CodeEdit::_fold_gutter_draw_callback(int p_line, int p_gutter, Rect2 p_regi
 		theme_cache.can_fold_icon->draw_rect(get_canvas_item(), p_region, false, theme_cache.code_folding_color);
 		return;
 	}
+	if (is_line_code_region_start(p_line)) {
+		theme_cache.folded_region_icon->draw_rect(get_canvas_item(), p_region, false, theme_cache.folded_code_region_color);
+		return;
+	}
 	theme_cache.folded_icon->draw_rect(get_canvas_item(), p_region, false, theme_cache.code_folding_color);
 }
 
@@ -1486,6 +1492,22 @@ bool CodeEdit::can_fold_line(int p_line) const {
 
 	if (_is_line_hidden(p_line) || is_line_folded(p_line)) {
 		return false;
+	}
+
+	/* Check for code region. */
+	if (is_line_code_region_end(p_line)) {
+		return false;
+	}
+	if (is_line_code_region_start(p_line)) {
+		/* Check if there is a valid end region tag */
+		for (int next_line = p_line + 1; next_line < get_line_count(); next_line++) {
+			if (is_line_code_region_end(next_line)) {
+				return true;
+			} else if (is_line_code_region_start(next_line)) {
+				WARN_PRINT_ONCE(vformat("Nested code regions are not supported. (Lines %s and %s)", p_line, next_line));
+				return false;
+			}
+		}
 	}
 
 	/* Check for full multiline line or block strings / comments. */
@@ -1536,31 +1558,44 @@ void CodeEdit::fold_line(int p_line) {
 	const int line_count = get_line_count() - 1;
 	int end_line = line_count;
 
-	int in_comment = is_in_comment(p_line);
-	int in_string = (in_comment == -1) ? is_in_string(p_line) : -1;
-	if (in_string != -1 || in_comment != -1) {
-		end_line = get_delimiter_end_position(p_line, get_line(p_line).size() - 1).y;
-		/* End line is the same therefore we have a block of single line delimiters. */
-		if (end_line == p_line) {
-			for (int i = p_line + 1; i <= line_count; i++) {
-				if ((in_string != -1 && is_in_string(i) == -1) || (in_comment != -1 && is_in_comment(i) == -1)) {
-					break;
-				}
-				end_line = i;
+	// Fold code region
+	if (is_line_code_region_start(p_line)) {
+		for (int endregion_line = p_line + 1; endregion_line < get_line_count(); endregion_line++) {
+			if (is_line_code_region_end(endregion_line)) {
+				end_line = endregion_line;
+				break;
 			}
 		}
-	} else {
-		int start_indent = get_indent_level(p_line);
-		for (int i = p_line + 1; i <= line_count; i++) {
-			if (get_line(i).strip_edges().size() == 0) {
-				continue;
+		set_line_background_color(p_line, theme_cache.folded_code_region_color);
+	}
+
+	int in_comment = is_in_comment(p_line);
+	int in_string = (in_comment == -1) ? is_in_string(p_line) : -1;
+	if (!is_line_code_region_start(p_line)) {
+		if (in_string != -1 || in_comment != -1) {
+			end_line = get_delimiter_end_position(p_line, get_line(p_line).size() - 1).y;
+			/* End line is the same therefore we have a block of single line delimiters. */
+			if (end_line == p_line) {
+				for (int i = p_line + 1; i <= line_count; i++) {
+					if ((in_string != -1 && is_in_string(i) == -1) || (in_comment != -1 && is_in_comment(i) == -1)) {
+						break;
+					}
+					end_line = i;
+				}
 			}
-			if (get_indent_level(i) > start_indent) {
-				end_line = i;
-				continue;
-			}
-			if (is_in_string(i) == -1 && is_in_comment(i) == -1) {
-				break;
+		} else {
+			int start_indent = get_indent_level(p_line);
+			for (int i = p_line + 1; i <= line_count; i++) {
+				if (get_line(i).strip_edges().size() == 0) {
+					continue;
+				}
+				if (get_indent_level(i) > start_indent) {
+					end_line = i;
+					continue;
+				}
+				if (is_in_string(i) == -1 && is_in_comment(i) == -1) {
+					break;
+				}
 			}
 		}
 	}
@@ -1606,6 +1641,10 @@ void CodeEdit::unfold_line(int p_line) {
 	}
 	fold_start = is_line_folded(fold_start) ? fold_start : p_line;
 
+	if (is_line_code_region_start(fold_start)) {
+		set_line_background_color(fold_start, Color(0.0, 0.0, 0.0, 0.0));
+	}
+
 	for (int i = fold_start + 1; i < get_line_count(); i++) {
 		if (!_is_line_hidden(i)) {
 			break;
@@ -1624,6 +1663,32 @@ void CodeEdit::fold_all_lines() {
 
 void CodeEdit::unfold_all_lines() {
 	_unhide_all_lines();
+}
+
+void CodeEdit::create_code_region() {
+	// Abort if there is no selected text
+	if (!has_selection()) {
+		return;
+	}
+	// Check that region tag find a comment delimiter and is valid
+	if (code_region_start.is_empty()) {
+		WARN_PRINT_ONCE("Cannot create code region without any one line comment delimiters");
+		return;
+	}
+
+	int from_line = get_selection_from_line();
+	int to_line = get_selection_to_line();
+	String last_line_content = get_line(to_line);
+
+	begin_complex_operation();
+	last_line_content += "\n" + code_region_end;
+	set_line(to_line, last_line_content);
+	insert_line_at(from_line, code_region_start + " " + RTR("New Code Region"));
+	set_caret_line(from_line);
+	set_caret_column(get_line(from_line).size());
+	select(from_line, code_region_start.length() + 1, from_line, code_region_start.length() + 1 + RTR("New Code Region").length());
+	fold_line(from_line);
+	end_complex_operation();
 }
 
 void CodeEdit::toggle_foldable_line(int p_line) {
@@ -1648,6 +1713,21 @@ TypedArray<int> CodeEdit::get_folded_lines() const {
 		}
 	}
 	return folded_lines;
+}
+
+/* Code region */
+bool CodeEdit::is_line_code_region_start(int p_line) const {
+	if (code_region_start.is_empty()) {
+		return false;
+	}
+	return get_line(p_line).strip_edges().begins_with(code_region_start);
+}
+
+bool CodeEdit::is_line_code_region_end(int p_line) const {
+	if (code_region_start.is_empty()) {
+		return false;
+	}
+	return get_line(p_line).strip_edges().begins_with(code_region_end);
 }
 
 /* Delimiters */
@@ -2745,6 +2825,9 @@ void CodeEdit::_add_delimiter(const String &p_start_key, const String &p_end_key
 		delimiter_cache.clear();
 		_update_delimiter_cache();
 	}
+	if (p_type == DelimiterType::TYPE_COMMENT) {
+		_update_code_region_tags();
+	}
 }
 
 void CodeEdit::_remove_delimiter(const String &p_start_key, DelimiterType p_type) {
@@ -2816,6 +2899,19 @@ TypedArray<String> CodeEdit::_get_delimiters(DelimiterType p_type) const {
 		r_delimiters.push_back(delimiters[i].start_key + (delimiters[i].end_key.is_empty() ? "" : " " + delimiters[i].end_key));
 	}
 	return r_delimiters;
+}
+
+/* Code Region */
+void CodeEdit::_update_code_region_tags() {
+	for (int i = 0; i < delimiters.size(); i++) {
+		if (delimiters[i].type != DelimiterType::TYPE_COMMENT) {
+			continue;
+		}
+		if (delimiters[i].end_key.is_empty() && delimiters[i].line_only == true) {
+			code_region_start = delimiters[i].start_key + "region";
+			code_region_end = delimiters[i].start_key + "endregion";
+		}
+	}
 }
 
 /* Code Completion */
