@@ -1336,6 +1336,16 @@ bool SceneTreeEditor::can_drop_data_fw(const Point2 &p_point, const Variant &p_d
 		}
 	}
 
+	if (String(d["type"]) == "signal") {
+		NodePath np = item->get_metadata(0);
+		Node *n = get_node(np);
+		if (!n || !n->get_script()) {
+			return false;
+		}
+		tree->set_drop_mode_flags(Tree::DROP_MODE_ON_ITEM);
+		return true;
+	}
+
 	return String(d["type"]) == "nodes" && filter.is_empty();
 }
 
@@ -1385,6 +1395,10 @@ void SceneTreeEditor::drop_data_fw(const Point2 &p_point, const Variant &p_data,
 				emit_signal(SNAME("script_dropped"), sp, np);
 			}
 		}
+	}
+
+	if (String(d["type"]) == "signal") {
+		emit_signal(SNAME("signal_dropped"), np);
 	}
 }
 
@@ -1443,6 +1457,7 @@ void SceneTreeEditor::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("nodes_rearranged", PropertyInfo(Variant::ARRAY, "paths"), PropertyInfo(Variant::NODE_PATH, "to_path"), PropertyInfo(Variant::INT, "type")));
 	ADD_SIGNAL(MethodInfo("files_dropped", PropertyInfo(Variant::PACKED_STRING_ARRAY, "files"), PropertyInfo(Variant::NODE_PATH, "to_path"), PropertyInfo(Variant::INT, "type")));
 	ADD_SIGNAL(MethodInfo("script_dropped", PropertyInfo(Variant::STRING, "file"), PropertyInfo(Variant::NODE_PATH, "to_path")));
+	ADD_SIGNAL(MethodInfo("signal_dropped", PropertyInfo(Variant::NODE_PATH, "to_path")));
 	ADD_SIGNAL(MethodInfo("rmb_pressed", PropertyInfo(Variant::VECTOR2, "position")));
 
 	ADD_SIGNAL(MethodInfo("open"));

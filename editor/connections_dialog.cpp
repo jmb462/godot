@@ -51,6 +51,7 @@
 #include "scene/gui/option_button.h"
 #include "scene/gui/popup_menu.h"
 #include "scene/gui/spin_box.h"
+#include "scene/gui/texture_rect.h"
 #include "scene/resources/packed_scene.h"
 
 static Node *_find_first_script(Node *p_root, Node *p_node) {
@@ -148,7 +149,7 @@ void ConnectDialog::ok_pressed() {
 			return;
 		}
 	}
-	emit_signal(SNAME("connected"));
+	emit_signal(SNAME("connected"), get_dst_path(), get_signal_name(), get_dst_method_name(), get_unbinds(), get_deferred(), get_one_shot());
 	hide();
 }
 
@@ -876,27 +877,38 @@ void ConnectionsDock::_filter_changed(const String &p_text) {
 	update_tree();
 }
 
+void ConnectionsDock::_signal_dropped(const NodePath p_dest_path) {
+	Node *target = selected_node->get_node(p_dest_path);
+	ERR_FAIL_NULL(target);
+	TreeItem *item = tree->get_selected();
+	if (!item || !selected_node) {
+		return;
+	}
+	String signal_name = item->get_metadata(0).get("name");
+	String method = ConnectDialog::generate_method_callback_name(selected_node, signal_name, target);
+	_make_or_edit_connection(p_dest_path, signal_name, method, 0, false, false);
+}
+
 /*
- * Post-ConnectDialog callback for creating/editing connections.
- * Creates or edits connections based on state of the ConnectDialog when "Connect" is pressed.
+ * Callback method for creating/editing connections.
+ * Creates or edits connections when ConnectDialog "Connect" is pressed or signal dragged on SceneTree.
  */
-void ConnectionsDock::_make_or_edit_connection() {
-	NodePath dst_path = connect_dialog->get_dst_path();
-	Node *target = selected_node->get_node(dst_path);
+void ConnectionsDock::_make_or_edit_connection(const NodePath p_dest_path, const StringName p_signal, const StringName p_method, int p_unbinds, bool p_deferred, bool p_one_shot) {
+	Node *target = selected_node->get_node(p_dest_path);
 	ERR_FAIL_NULL(target);
 
 	ConnectDialog::ConnectionData cd;
-	cd.source = connect_dialog->get_source();
+	cd.source = selected_node;
 	cd.target = target;
-	cd.signal = connect_dialog->get_signal_name();
-	cd.method = connect_dialog->get_dst_method_name();
-	cd.unbinds = connect_dialog->get_unbinds();
+	cd.signal = p_signal;
+	cd.method = p_method;
+	cd.unbinds = p_unbinds;
 	if (cd.unbinds == 0) {
 		cd.binds = connect_dialog->get_binds();
 	}
 	bool b_deferred = connect_dialog->get_deferred();
 	bool b_oneshot = connect_dialog->get_one_shot();
-	cd.flags = CONNECT_PERSIST | (b_deferred ? CONNECT_DEFERRED : 0) | (b_oneshot ? CONNECT_ONE_SHOT : 0);
+	cd.flags = CONNECT_PERSIST | (p_deferred ? CONNECT_DEFERRED : 0) | (p_one_shot ? CONNECT_ONE_SHOT : 0);
 
 	// Conditions to add function: must have a script and must not have the method already
 	// (in the class, the script itself, or inherited).
@@ -1272,6 +1284,37 @@ void ConnectionsDock::_close() {
 	hide();
 }
 
+Variant ConnectionsDock::get_drag_data_fw(const Point2 &p_point, Control *p_from) {
+	TreeItem *item_selected = tree->get_selected();
+
+	if (!item_selected) {
+		return Variant();
+	}
+
+	String signal_name = Dictionary(item_selected->get_metadata(0)).get("name", "");
+
+	if (signal_name.is_empty()) {
+		return Variant();
+	}
+
+	Ref<Texture2D> icon = Control::get_theme_icon(SNAME("Signal"), SNAME("EditorIcons"));
+
+	HBoxContainer *hb = memnew(HBoxContainer);
+	TextureRect *tf = memnew(TextureRect);
+	tf->set_texture(icon);
+	tf->set_stretch_mode(TextureRect::STRETCH_KEEP_CENTERED);
+	hb->add_child(tf);
+	Label *label = memnew(Label(item_selected->get_text(0)));
+	hb->add_child(label);
+	set_drag_preview(hb);
+
+	Dictionary drag_data;
+	drag_data["type"] = "signal";
+	drag_data["signal"] = signal_name;
+
+	return drag_data;
+}
+
 void ConnectionsDock::_connect_pressed() {
 	TreeItem *item = tree->get_selected();
 	if (!item) {
@@ -1314,6 +1357,7 @@ void ConnectionsDock::_notification(int p_what) {
 
 void ConnectionsDock::_bind_methods() {
 	ClassDB::bind_method("update_tree", &ConnectionsDock::update_tree);
+	ClassDB::bind_method(D_METHOD("_get_drag_data_fw"), &ConnectionsDock::get_drag_data_fw);
 }
 
 void ConnectionsDock::set_node(Node *p_node) {
@@ -1558,6 +1602,9 @@ ConnectionsDock::ConnectionsDock() {
 	vbc->add_child(tree);
 	tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	tree->set_allow_rmb_select(true);
+	tree->set_drag_forwarding(callable_mp(this, &ConnectionsDock::get_drag_data_fw).bind(tree), Callable(), Callable());
+
+	SceneTreeDock::get_singleton()->get_tree_editor()->connect("signal_dropped", callable_mp(this, &ConnectionsDock::_signal_dropped));
 
 	connect_button = memnew(Button);
 	HBoxContainer *hb = memnew(HBoxContainer);

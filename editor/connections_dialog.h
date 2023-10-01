@@ -32,6 +32,7 @@
 #define CONNECTIONS_DIALOG_H
 
 #include "scene/gui/check_button.h"
+#include "scene/gui/control.h"
 #include "scene/gui/dialogs.h"
 #include "scene/gui/tree.h"
 
@@ -45,6 +46,7 @@ class OptionButton;
 class PopupMenu;
 class SceneTreeEditor;
 class SpinBox;
+class TextureRect;
 
 class ConnectDialog : public ConfirmationDialog {
 	GDCLASS(ConnectDialog, ConfirmationDialog);
@@ -234,8 +236,9 @@ class ConnectionsDock : public VBoxContainer {
 	HashMap<StringName, HashMap<StringName, String>> descr_cache;
 
 	void _filter_changed(const String &p_text);
+	void _signal_dropped(const NodePath p_dest_path);
 
-	void _make_or_edit_connection();
+	void _make_or_edit_connection(const NodePath p_dest_path, const StringName p_signal, const StringName p_method, int p_unbinds, bool p_deferred, bool p_one_shot);
 	void _connect(const ConnectDialog::ConnectionData &p_cd);
 	void _disconnect(const ConnectDialog::ConnectionData &p_cd);
 	void _disconnect_all();
@@ -257,6 +260,8 @@ class ConnectionsDock : public VBoxContainer {
 	void _slot_menu_about_to_popup();
 	void _rmb_pressed(const Ref<InputEvent> &p_event);
 	void _close();
+
+	Variant get_drag_data_fw(const Point2 &p_point, Control *p_from);
 
 protected:
 	void _connect_pressed();
